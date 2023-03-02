@@ -1,5 +1,5 @@
 import Router from "@Pages/Router";
-import Reactfrom "react";
+import React from "react";
 
 export default function App() {
   return (
