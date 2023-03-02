@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@Open/*": ["./src/components/Open/*"],
+      "@Join/*": ["./src/components/Join/*"],
+      "@Room/*": ["./src/components/Room/*"],
+      "@Create/*": ["./src/components/Create/*"],
+      "@Pages/*": ["./src/pages/*"]
+    }
+  }
+}
