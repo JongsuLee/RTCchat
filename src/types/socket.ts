@@ -8,6 +8,7 @@ export interface ServerToClientEvents {
 export interface ClientToServerEvents {
   new_come: (id: string) => void;
   come_back: (prevId: string, id: string) => void;
+  enter_room: (roonName: string, nickName: string, id: string) => void;
   hi: () => void;
 }
 

@@ -31,15 +31,31 @@ const io = new Server<
   },
 }).of("/chatRooms");
 
-const openRooms = new Map();
-const joiningRooms = new Map();
-openRooms.set("1", { room: "room1", clients: ["client1"] });
+interface Room {
+  room: string;
+  clients: string[];
+}
+const openRooms = new Map<string, Room>();
+const joiningRooms = new Map<string, Room[]>();
 
 io.on("connection", (socket) => {
   socket.on("new_come", (id: string) => {
-    console.log(openRooms);
+    socket.emit("new_come", JSON.stringify(Object.fromEntries(openRooms)));
+  });
+  socket.on("enter_room", (roomName: string, nickName: string, id: string) => {
+    const room = openRooms.get(roomName);
+    const user = joiningRooms.get(id);
 
-    socket.emit("new_come", JSON.stringify(Array.from(openRooms.entries())));
+    socket.join(roomName);
+    console.log(socket);
+
+    if (room) room.clients.push(id);
+    else openRooms.set(roomName, { room: roomName, clients: [id] });
+
+    if (user) user.push({ room: roomName, clients: [id] });
+    else joiningRooms.set(id, [{ room: roomName, clients: [id] }]);
+    console.log(openRooms);
+    console.log(joiningRooms);
   });
 });
 
