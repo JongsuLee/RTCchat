@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { Socket } from "socket.io-client";
 import { ClientToServerEvents, ServerToClientEvents } from "src/types/socket";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 interface Props {
   socket: Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -18,10 +19,11 @@ const CreateRoom: React.FC<Props> = ({ socket }) => {
     handleSubmit,
     formState: { errors },
   } = useForm<FormValue>();
+  const navigate = useNavigate();
 
   const onSubmitHandler: SubmitHandler<FormValue> = (data) => {
-    console.log(data);
     socket.emit("enter_room", data.roomName, data.nickName, socket.id);
+    navigate(`entered_room/${data.roomName}`);
   };
 
   return (

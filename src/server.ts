@@ -37,25 +37,53 @@ interface Room {
 }
 const openRooms = new Map<string, Room>();
 const joiningRooms = new Map<string, Room[]>();
+let curId: string;
+let idx: number = 0;
 
 io.on("connection", (socket) => {
   socket.on("new_come", (id: string) => {
     socket.emit("new_come", JSON.stringify(Object.fromEntries(openRooms)));
   });
+
+  socket.on("renewal", (id: string) => {
+    socket.emit(
+      "renewal",
+      JSON.stringify(Object.fromEntries(openRooms)),
+      JSON.stringify(joiningRooms.get(id))
+    );
+  });
+
   socket.on("enter_room", (roomName: string, nickName: string, id: string) => {
+    curId = id;
     const room = openRooms.get(roomName);
-    const user = joiningRooms.get(id);
+    const join = joiningRooms.get(curId);
 
     socket.join(roomName);
-    console.log(socket);
 
-    if (room) room.clients.push(id);
-    else openRooms.set(roomName, { room: roomName, clients: [id] });
+    if (room) room.clients.push(curId);
+    else openRooms.set(roomName, { room: roomName, clients: [curId] });
 
-    if (user) user.push({ room: roomName, clients: [id] });
-    else joiningRooms.set(id, [{ room: roomName, clients: [id] }]);
-    console.log(openRooms);
-    console.log(joiningRooms);
+    if (join) {
+      join.push({
+        room: roomName,
+        clients: openRooms.get(roomName)?.clients || [curId],
+      });
+    } else {
+      joiningRooms.set(id, [
+        {
+          room: roomName,
+          clients: openRooms.get(roomName)?.clients || [curId],
+        },
+      ]);
+    }
+  });
+
+  socket.on("go_back", (roomName: string) => {
+    console.log("goback11");
+    console.log(socket.id);
+    console.log();
+
+    socket.leave(roomName);
   });
 });
 
