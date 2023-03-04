@@ -11,8 +11,8 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
   const navigate = useNavigate();
 
   window.onpopstate = (event: PopStateEvent) => {
-    roomName && socket.emit("go_back", roomName);
-    navigate("/", { state: { id: socket.id } });
+    sessionStorage.setItem("renewal", "true");
+    navigate("/");
   };
 
   return <div>entered room</div>;

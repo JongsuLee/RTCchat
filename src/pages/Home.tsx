@@ -15,8 +15,7 @@ interface Props {
 }
 
 const Home: React.FC<Props> = ({ io }) => {
-  const id = useLocation().state ? useLocation().state.id : null;
-  let renewaled: boolean = false;
+  const renewal = sessionStorage.getItem("renewal");
   const [socket, setSocket] = useState<Socket<
     ServerToClientEvents,
     ClientToServerEvents
@@ -24,28 +23,31 @@ const Home: React.FC<Props> = ({ io }) => {
   const [openRooms, setOpenRooms] = useState<Room[] | null>(null);
   const [joiningRooms, setJoiningRooms] = useState<Room[] | null>(null);
 
-  socket &&
+  if (socket) {
     socket.on("connect", () => {
       socket.emit("new_come", socket.id);
       socket.on("new_come", (data: string) => {
         setOpenRooms(JSON.parse(data));
       });
+    });
+
+    socket.on("join", (data: string) => {
+      setOpenRooms(JSON.parse(data));
+    });
+
+    if (renewal === "true") {
+      socket.emit("renewal", socket.id);
       socket.on("renewal", (data1: string, data2: string) => {
-        console.log(data1);
-        renewaled = true;
+        sessionStorage.removeItem("renewal");
         setOpenRooms(JSON.parse(data1));
         setJoiningRooms(JSON.parse(data2));
       });
-    });
-  !renewaled && socket && socket.emit("renewal", id);
-  console.log(id);
+    }
+  }
 
   useEffect(() => {
     setSocket(io);
-  }, [id]);
-
-  openRooms && console.log(openRooms);
-  joiningRooms && console.log(joiningRooms);
+  }, []);
 
   return (
     <>
