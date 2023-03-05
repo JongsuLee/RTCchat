@@ -10,6 +10,9 @@ interface Room {
   room: string;
   clients: string[];
 }
+interface JoiningRoom extends Room {
+  nickName: string;
+}
 interface Props {
   io: Socket<ServerToClientEvents, ClientToServerEvents>;
 }
@@ -21,7 +24,7 @@ const Home: React.FC<Props> = ({ io }) => {
     ClientToServerEvents
   > | null>(null);
   const [openRooms, setOpenRooms] = useState<Room[] | null>(null);
-  const [joiningRooms, setJoiningRooms] = useState<Room[] | null>(null);
+  const [joiningRooms, setJoiningRooms] = useState<JoiningRoom[] | null>(null);
 
   if (socket) {
     socket.on("connect", () => {
@@ -53,7 +56,7 @@ const Home: React.FC<Props> = ({ io }) => {
     <>
       <OpenRooms rooms={openRooms} />
       {socket && <CreateRoom socket={socket} />}
-      <JoiningRooms />
+      <JoiningRooms rooms={joiningRooms} />
     </>
   );
 };

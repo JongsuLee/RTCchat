@@ -35,16 +35,20 @@ interface Room {
   room: string;
   clients: Set<string>;
 }
+interface JoiningRoom extends Room {
+  nickName: string;
+}
 interface OpenRoomsObj {
   [key: string]: object;
 }
 interface JoiningRoomsObj {
   room: string;
+  nickName: string;
   clients: string[];
 }
 
 const openRooms = new Map<string, Room>();
-const joiningRooms = new Map<string, Room[]>();
+const joiningRooms = new Map<string, JoiningRoom[]>();
 
 io.on("connection", (socket) => {
   socket.on("new_come", (id: string) => {
@@ -61,12 +65,15 @@ io.on("connection", (socket) => {
       };
     }
     const joiningRoomsObj: JoiningRoomsObj[] = [];
-    joiningRooms.get(id)?.map((room: Room, index: number, array: Room[]) =>
-      joiningRoomsObj.push({
-        room: room.room,
-        clients: Array.from(room.clients),
-      })
-    );
+    joiningRooms
+      .get(id)
+      ?.map((room: JoiningRoom, index: number, array: JoiningRoom[]) =>
+        joiningRoomsObj.push({
+          room: room.room,
+          nickName: room.nickName,
+          clients: Array.from(room.clients),
+        })
+      );
 
     socket.emit(
       "renewal",
@@ -99,6 +106,7 @@ io.on("connection", (socket) => {
         clients.add(id);
         join.push({
           room: roomName,
+          nickName: nickName,
           clients: openRooms.get(roomName)?.clients || clients,
         });
       }
@@ -109,6 +117,7 @@ io.on("connection", (socket) => {
       joiningRooms.set(id, [
         {
           room: roomName,
+          nickName: nickName,
           clients: openRooms.get(roomName)?.clients || clients,
         },
       ]);
@@ -123,6 +132,46 @@ io.on("connection", (socket) => {
       socket.to("server").emit("join", JSON.stringify(openRoomsObj));
     }
   });
+
+  socket.on("leave_room", (roomName: string, id: string) => {
+    const room = openRooms.get(roomName);
+    const join = joiningRooms.get(id);
+
+    socket.leave(roomName);
+
+    room?.clients.delete(id);
+    if (room && room.clients.size === 0) openRooms.delete(roomName);
+    if (join) {
+      for (let i = 0; i < join?.length; i++) {
+        if (join[i].room === roomName) join.splice(i, 1);
+      }
+    }
+    const openRoomsObj: OpenRoomsObj = {};
+    for (const [key, value] of openRooms) {
+      openRoomsObj[key] = {
+        room: value.room,
+        clients: Array.from(value.clients),
+      };
+    }
+    socket.to("server").emit("join", JSON.stringify(openRoomsObj));
+  });
+
+  socket.on("entered", (roomName: string, id: string) => {
+    const room = joiningRooms.get(id);
+
+    if (room) {
+      for (let i = 0; i < room.length; i++) {
+        if (room[i].room === roomName) socket.emit("entered", room[i].nickName);
+      }
+    }
+  });
+
+  socket.on(
+    "message",
+    (roomName: string, nickName: string, message: string) => {
+      socket.to(roomName).emit("message", nickName, message);
+    }
+  );
 });
 
 server.listen(5000, () => console.log("Listening to http://localhost:5000"));
