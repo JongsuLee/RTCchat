@@ -6,23 +6,26 @@ import PeerFace from "./PeerFace";
 
 interface Props {
   socket: Socket<ServerToClientEvents, ClientToServerEvents>;
+  peers: Set<string>;
+  roomName: string;
+  host: string;
 }
 
-const FaceConnection: React.FC<Props> = ({ socket }) => {
+const FaceConnection: React.FC<Props> = ({ socket, peers, roomName, host }) => {
   const [muteBtn, setMuteBtn] = useState<string>("UnMute");
   const [cameraBtn, setCameraBtn] = useState<string>("CameraOFF");
   const [muted, setMuted] = useState<boolean>(true);
   const [cameraState, setCameraState] = useState<boolean>(true);
   const [cameraId, setCameraId] = useState<string | null>(null);
   const [myStream, setMyStream] = useState<MediaStream>();
-  let peerConnection: RTCPeerConnection;
-  function makeConnection() {
-    peerConnection = new RTCPeerConnection();
-  }
+  const [peerConnection, setPeerConnection] =
+    useState<RTCPeerConnection | null>(null);
 
+  // Device Setting
   async function getCameras() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const curCamera = myStream?.getVideoTracks()[0];
+
     const select = document.getElementById("cameras");
     devices.map(
       (device: MediaDeviceInfo, index: number, array: MediaDeviceInfo[]) => {
@@ -64,6 +67,7 @@ const FaceConnection: React.FC<Props> = ({ socket }) => {
           (track: MediaStreamTrack, index: number, array: MediaStreamTrack[]) =>
             (track.enabled = cameraState)
         );
+
       if (cameraId === null) await getCameras();
       setMyStream(myStream);
     } catch (error) {
@@ -88,9 +92,65 @@ const FaceConnection: React.FC<Props> = ({ socket }) => {
     await getMedia(cameraId);
   }
 
+  // RTC Connection
+  function makeConnection(peers: Set<string>) {
+    const urls: string[] = ["stun:stun.l.google.com:19302"];
+    for (let i = 1; i < peers.size; i++) {
+      urls.push(`stun:stun${i}.l.google.com:19302`);
+    }
+    setPeerConnection(
+      new RTCPeerConnection({
+        iceServers: [
+          {
+            urls: urls,
+          },
+        ],
+      })
+    );
+  }
+
+  async function createOffer(peerConnection: RTCPeerConnection) {
+    const offer = await peerConnection.createOffer();
+    peerConnection.setLocalDescription(offer);
+    socket.emit("offer", offer, roomName);
+    console.log("sent offer");
+  }
+
+  async function createAnswer(
+    peerConnection: RTCPeerConnection,
+    offer: RTCSessionDescriptionInit
+  ) {
+    peerConnection.setRemoteDescription(offer);
+    const answer = await peerConnection.createAnswer();
+    peerConnection.setLocalDescription(answer);
+    socket.emit("answer", answer, host);
+    console.log("sent answer");
+  }
+  async function receiveAnswer(
+    peerConnection: RTCPeerConnection,
+    answer: RTCSessionDescriptionInit
+  ) {
+    await peerConnection.setRemoteDescription(answer);
+  }
+
   useEffect(() => {
     getMedia(cameraId);
-  }, [muted, cameraState]);
+    makeConnection(peers);
+    if (peers.size > 1 && peerConnection && socket.id === host) {
+      createOffer(peerConnection);
+      socket.on("answer", (answer: RTCSessionDescriptionInit) => {
+        console.log("received answer");
+        receiveAnswer(peerConnection, answer);
+      });
+    }
+    // Socket Code
+    socket.on("offer", async (offer: RTCSessionDescriptionInit) => {
+      if (peerConnection) {
+        console.log("received offer");
+        createAnswer(peerConnection, offer);
+      }
+    });
+  }, [muted, cameraState, cameraId, peers]);
 
   return (
     <>

@@ -1,5 +1,7 @@
 import FaceConnection from "@Room/FaceConnection";
 import Message from "@Room/Message";
+import MessageForm from "@Room/MessageForm";
+import Messages from "@Room/Messages";
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { set, SubmitHandler, useForm } from "react-hook-form";
@@ -11,22 +13,18 @@ interface Props {
   socket: Socket<ServerToClientEvents, ClientToServerEvents>;
 }
 
-interface FormValue {
-  message: string;
-}
-
 const EnteredRoom: React.FC<Props> = ({ socket }) => {
   const { roomName } = useParams();
   const navigate = useNavigate();
   const [nickName, setNickName] = useState<string | null>(null);
+  const [host, setHost] = useState<string | null>(null);
+  const [peerConnected, setPeerConnected] = useState<Set<string>>(
+    new Set([socket.id])
+  );
   const [messages, setMessages] = useState<JSX.Element[]>([]);
   const [count, setCount] = useState<number>(0);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormValue>();
 
+  // Header Functions
   window.onpopstate = (event: PopStateEvent) => {
     sessionStorage.setItem("renewal", "true");
     navigate("/");
@@ -43,23 +41,15 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
     navigate("/");
   }
 
-  const onSubmitHandler: SubmitHandler<FormValue> = (data) => {
-    setCount(count + 1);
-    setMessages([
-      ...messages,
-      <Message
-        type="my"
-        message={data.message}
-        nickName={nickName}
-        key={`${nickName}-${count}`}
-      />,
-    ]);
-    roomName &&
-      nickName &&
-      socket.emit("message", roomName, nickName, data.message);
-    const input = document.querySelector("input");
-    if (input) input.value = "";
-  };
+  // Socket Code
+  socket.on("new_peer", (id: string) => {
+    socket.emit("origin_peer", [...peerConnected], id);
+    setPeerConnected(new Set([...peerConnected, id]));
+  });
+
+  socket.on("origin_peer", (peers: string[]) => {
+    setPeerConnected(new Set([...peerConnected, ...peers]));
+  });
 
   socket.on("message", (nickName: string, message: string) => {
     setCount(count + 1);
@@ -76,7 +66,10 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
 
   useEffect(() => {
     roomName && socket.emit("entered", roomName, socket.id);
-    socket.on("entered", (nickName) => setNickName(nickName));
+    socket.on("entered", (host, nickName) => {
+      setHost(host);
+      setNickName(nickName);
+    });
   }, []);
 
   return (
@@ -88,21 +81,28 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
       </div>
       <div className="messanger">
         <div className="face-talk">
-          {socket && <FaceConnection socket={socket} />}
+          {socket && roomName !== undefined && host && (
+            <FaceConnection
+              socket={socket}
+              peers={peerConnected}
+              roomName={roomName}
+              host={host}
+            />
+          )}
         </div>
         <div className="message-talk">
-          <div className="messages">{messages}</div>
-          <form
-            className="message-form"
-            onSubmit={handleSubmit(onSubmitHandler)}>
-            <input
-              type="text"
-              placeholder="매세지를 작성해주세요..."
-              {...register("message")}
-              required
+          <Messages messages={messages} />
+          {roomName !== undefined && (
+            <MessageForm
+              socket={socket}
+              roomName={roomName}
+              nickName={nickName}
+              messages={messages}
+              setMessages={setMessages}
+              count={count}
+              setCount={setCount}
             />
-            <button type="submit">전송하기</button>
-          </form>
+          )}
         </div>
       </div>
     </>

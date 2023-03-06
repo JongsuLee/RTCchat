@@ -1,6 +1,6 @@
 import express from "express";
 import http from "http";
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 import cors from "cors";
 import {
   ClientToServerEvents,
@@ -33,6 +33,7 @@ const io = new Server<
 
 interface Room {
   room: string;
+  host: string;
   clients: Set<string>;
 }
 interface JoiningRoom extends Room {
@@ -92,7 +93,7 @@ io.on("connection", (socket) => {
     else {
       const clients = new Set<string>();
       clients.add(id);
-      openRooms.set(roomName, { room: roomName, clients: clients });
+      openRooms.set(roomName, { room: roomName, host: id, clients: clients });
     }
 
     if (join) {
@@ -106,6 +107,7 @@ io.on("connection", (socket) => {
         clients.add(id);
         join.push({
           room: roomName,
+          host: openRooms.get(roomName)?.host || "",
           nickName: nickName,
           clients: openRooms.get(roomName)?.clients || clients,
         });
@@ -117,6 +119,7 @@ io.on("connection", (socket) => {
       joiningRooms.set(id, [
         {
           room: roomName,
+          host: openRooms.get(roomName)?.host || "",
           nickName: nickName,
           clients: openRooms.get(roomName)?.clients || clients,
         },
@@ -126,6 +129,7 @@ io.on("connection", (socket) => {
       for (const [key, value] of openRooms) {
         openRoomsObj[key] = {
           room: value.room,
+          host: value.host,
           clients: Array.from(value.clients),
         };
       }
@@ -161,9 +165,27 @@ io.on("connection", (socket) => {
 
     if (room) {
       for (let i = 0; i < room.length; i++) {
-        if (room[i].room === roomName) socket.emit("entered", room[i].nickName);
+        if (room[i].room === roomName)
+          socket.emit("entered", room[i].host, room[i].nickName);
       }
     }
+
+    socket.to(roomName).emit("new_peer", id);
+  });
+
+  socket.on("origin_peer", (peers: string[], id: string) => {
+    socket.join(id);
+    socket.to(id).emit("origin_peer", peers);
+  });
+
+  socket.on("offer", (offer: RTCSessionDescriptionInit, roomName: string) => {
+    console.log("offer:", socket.id);
+
+    socket.to(roomName).emit("offer", offer);
+  });
+
+  socket.on("answer", (answer: RTCSessionDescriptionInit, host: string) => {
+    io.sockets.get(host)?.emit("answer", answer);
   });
 
   socket.on(
