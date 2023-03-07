@@ -44,11 +44,11 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
   // Socket Code
   socket.on("new_peer", (id: string) => {
     socket.emit("origin_peer", [...peerConnected], id);
-    setPeerConnected(new Set([...peerConnected, id]));
+    setPeerConnected(new Set([...Array.from(peerConnected), id]));
   });
 
   socket.on("origin_peer", (peers: string[]) => {
-    setPeerConnected(new Set([...peerConnected, ...peers]));
+    setPeerConnected(new Set([...peers, ...peerConnected]));
   });
 
   socket.on("message", (nickName: string, message: string) => {
@@ -84,7 +84,7 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
           {socket && roomName !== undefined && host && (
             <FaceConnection
               socket={socket}
-              peers={peerConnected}
+              peerConnected={Array.from(peerConnected)}
               roomName={roomName}
               host={host}
             />

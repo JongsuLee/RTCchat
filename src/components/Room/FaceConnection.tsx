@@ -6,20 +6,25 @@ import PeerFace from "./PeerFace";
 
 interface Props {
   socket: Socket<ServerToClientEvents, ClientToServerEvents>;
-  peers: Set<string>;
+  peerConnected: string[];
   roomName: string;
   host: string;
 }
 
-const FaceConnection: React.FC<Props> = ({ socket, peers, roomName, host }) => {
+const FaceConnection: React.FC<Props> = ({
+  socket,
+  peerConnected,
+  roomName,
+  host,
+}) => {
   const [muteBtn, setMuteBtn] = useState<string>("UnMute");
   const [cameraBtn, setCameraBtn] = useState<string>("CameraOFF");
   const [muted, setMuted] = useState<boolean>(true);
   const [cameraState, setCameraState] = useState<boolean>(true);
   const [cameraId, setCameraId] = useState<string | null>(null);
   const [myStream, setMyStream] = useState<MediaStream>();
-  const [peerConnection, setPeerConnection] =
-    useState<RTCPeerConnection | null>(null);
+  const [peers, setPeers] = useState<Map<string, RTCPeerConnection>>(new Map());
+  const [remoteStreams, setRemoteStreams] = useState<MediaStream[]>([]);
 
   // Device Setting
   async function getCameras() {
@@ -93,64 +98,102 @@ const FaceConnection: React.FC<Props> = ({ socket, peers, roomName, host }) => {
   }
 
   // RTC Connection
-  function makeConnection(peers: Set<string>) {
-    const urls: string[] = ["stun:stun.l.google.com:19302"];
-    for (let i = 1; i < peers.size; i++) {
-      urls.push(`stun:stun${i}.l.google.com:19302`);
-    }
-    setPeerConnection(
-      new RTCPeerConnection({
-        iceServers: [
-          {
-            urls: urls,
-          },
-        ],
-      })
-    );
+  let peer: RTCPeerConnection;
+  function makePeerConnection(to: string): RTCPeerConnection {
+    peer = new RTCPeerConnection({
+      iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
+    });
+    const newPeers = new Map(peers);
+    newPeers.set(to, peer);
+    setPeers(newPeers);
+
+    peer.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
+      if (event.candidate) socket.emit("ice", event.candidate, to, socket.id);
+      console.log("sent ice to", to);
+    };
+
+    peer.ontrack = (event) => {
+      const remoteStream = event.streams[0];
+      setRemoteStreams([...remoteStreams, remoteStream]);
+    };
+
+    return peer;
   }
 
-  async function createOffer(peerConnection: RTCPeerConnection) {
-    const offer = await peerConnection.createOffer();
-    peerConnection.setLocalDescription(offer);
-    socket.emit("offer", offer, roomName);
+  async function createOffer(id: string, peer: RTCPeerConnection) {
+    const offer = await peer.createOffer();
+    await peer.setLocalDescription(offer);
+    socket.emit("offer", offer, id, socket.id);
     console.log("sent offer");
   }
 
-  async function createAnswer(
-    peerConnection: RTCPeerConnection,
-    offer: RTCSessionDescriptionInit
-  ) {
-    peerConnection.setRemoteDescription(offer);
-    const answer = await peerConnection.createAnswer();
-    peerConnection.setLocalDescription(answer);
-    socket.emit("answer", answer, host);
-    console.log("sent answer");
+  async function createAnswer(to: string) {
+    if (peer) {
+      const answer = await peer.createAnswer();
+      await peer.setLocalDescription(answer);
+      await new Promise<void>((resolve) => {
+        socket.emit("answer", answer, to, socket.id);
+        socket.on("answered", (answered: RTCSessionDescriptionInit) => {
+          if (answer === answered) resolve();
+        });
+      });
+      console.log("sent answer");
+    }
   }
+
   async function receiveAnswer(
-    peerConnection: RTCPeerConnection,
-    answer: RTCSessionDescriptionInit
+    answer: RTCSessionDescriptionInit,
+    from: string
   ) {
-    await peerConnection.setRemoteDescription(answer);
+    if (peer) {
+      await new Promise<void>(async (resolve) => {
+        await peer.setRemoteDescription(answer);
+        peer.addEventListener("signalingstatechange", function hanlder() {
+          if (peer.signalingState === "stable") {
+            socket.emit("answered", from, answer);
+            resolve();
+          }
+        });
+      });
+    }
   }
+
+  async function receiveIce(ice: RTCIceCandidate, from: string) {
+    if (peer) await peer.addIceCandidate(ice);
+  }
+
+  // Socket Code
+  socket.on("offer", async (offer: RTCSessionDescriptionInit, from: string) => {
+    peer = makePeerConnection(from);
+
+    if (peer) {
+      console.log("received offer:", offer);
+      await peer.setRemoteDescription(offer);
+      createAnswer(from);
+    }
+  });
+
+  socket.on(
+    "answer",
+    async (answer: RTCSessionDescriptionInit, from: string) => {
+      await receiveAnswer(answer, from);
+    }
+  );
+
+  socket.on("ice", (ice: RTCIceCandidate, from: string) => {
+    receiveIce(ice, from);
+  });
 
   useEffect(() => {
     getMedia(cameraId);
-    makeConnection(peers);
-    if (peers.size > 1 && peerConnection && socket.id === host) {
-      createOffer(peerConnection);
-      socket.on("answer", (answer: RTCSessionDescriptionInit) => {
-        console.log("received answer");
-        receiveAnswer(peerConnection, answer);
-      });
-    }
-    // Socket Code
-    socket.on("offer", async (offer: RTCSessionDescriptionInit) => {
-      if (peerConnection) {
-        console.log("received offer");
-        createAnswer(peerConnection, offer);
+    if (socket.id !== host && peerConnected.length > 1) {
+      for (let i = 0; i < peerConnected.length; i++) {
+        if (peerConnected[i] === socket.id) continue;
+        const peer = makePeerConnection(socket.id);
+        createOffer(peerConnected[i], peer);
       }
-    });
-  }, [muted, cameraState, cameraId, peers]);
+    }
+  }, [muted, cameraState, cameraId]);
 
   return (
     <>

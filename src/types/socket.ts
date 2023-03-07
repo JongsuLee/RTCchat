@@ -5,8 +5,10 @@ export interface ServerToClientEvents {
   entered: (host: string, nickName: string) => void;
   new_peer: (id: string) => void;
   origin_peer: (peers: string[]) => void;
-  offer: (offer: RTCSessionDescriptionInit) => void;
-  answer: (answer: RTCSessionDescriptionInit) => void;
+  offer: (offer: RTCSessionDescriptionInit, from: string) => void;
+  answer: (answer: RTCSessionDescriptionInit, from: string) => void;
+  answered: (answered: RTCSessionDescriptionInit) => void;
+  ice: (ice: RTCIceCandidate, from: string) => void;
   message: (nickName: string, message: string) => void;
   noArg: () => void;
   basicEmit: (a: number, b: string, c: Buffer) => void;
@@ -20,8 +22,10 @@ export interface ClientToServerEvents {
   enter_room: (roonName: string, nickName: string, id: string) => void;
   entered: (roomName: string, id: string) => void;
   origin_peer: (peers: string[], id: string) => void;
-  offer: (offer: RTCSessionDescriptionInit, roomName: string) => void;
-  answer: (answer: RTCSessionDescriptionInit, host: string) => void;
+  offer: (offer: RTCSessionDescriptionInit, to: string, from: string) => void;
+  answer: (answer: RTCSessionDescriptionInit, to: string, from: string) => void;
+  answered: (to: string, answered: RTCSessionDescriptionInit) => void;
+  ice: (ice: RTCIceCandidate, to: string, from: string) => void;
   leave_room: (roomName: string, id: string) => void;
   message: (roomName: string, nickName: string, message: string) => void;
   renewal: (id: string) => void;

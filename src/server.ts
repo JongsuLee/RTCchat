@@ -84,7 +84,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("enter_room", (roomName: string, nickName: string, id: string) => {
-    const room = openRooms.get(roomName);
+    let room = openRooms.get(roomName);
     const join = joiningRooms.get(id);
 
     socket.join(roomName);
@@ -135,6 +135,9 @@ io.on("connection", (socket) => {
       }
       socket.to("server").emit("join", JSON.stringify(openRoomsObj));
     }
+    room = openRooms.get(roomName);
+    room !== undefined &&
+      io.sockets.get(room?.host)?.emit("new_peer", socket.id);
   });
 
   socket.on("leave_room", (roomName: string, id: string) => {
@@ -169,8 +172,6 @@ io.on("connection", (socket) => {
           socket.emit("entered", room[i].host, room[i].nickName);
       }
     }
-
-    socket.to(roomName).emit("new_peer", id);
   });
 
   socket.on("origin_peer", (peers: string[], id: string) => {
@@ -178,14 +179,26 @@ io.on("connection", (socket) => {
     socket.to(id).emit("origin_peer", peers);
   });
 
-  socket.on("offer", (offer: RTCSessionDescriptionInit, roomName: string) => {
-    console.log("offer:", socket.id);
+  socket.on(
+    "offer",
+    (offer: RTCSessionDescriptionInit, to: string, from: string) => {
+      io.sockets.get(to)?.emit("offer", offer, from);
+    }
+  );
 
-    socket.to(roomName).emit("offer", offer);
+  socket.on(
+    "answer",
+    (answer: RTCSessionDescriptionInit, to: string, from: string) => {
+      io.sockets.get(to)?.emit("answer", answer, from);
+    }
+  );
+
+  socket.on("answered", (to: string, answered: RTCSessionDescriptionInit) => {
+    io.sockets.get(to)?.emit("answered", answered);
   });
 
-  socket.on("answer", (answer: RTCSessionDescriptionInit, host: string) => {
-    io.sockets.get(host)?.emit("answer", answer);
+  socket.on("ice", (ice: RTCIceCandidate, to: string, from: string) => {
+    io.sockets.get(to)?.emit("ice", ice, from);
   });
 
   socket.on(
