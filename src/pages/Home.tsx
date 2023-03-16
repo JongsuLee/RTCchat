@@ -40,12 +40,13 @@ const Home: React.FC<Props> = ({ io }) => {
 
     if (renewal === "true") {
       socket.emit("renewal", socket.id);
-      socket.on("renewal", (data1: string, data2: string) => {
-        sessionStorage.removeItem("renewal");
-        setOpenRooms(JSON.parse(data1));
-        setJoiningRooms(JSON.parse(data2));
-      });
     }
+
+    socket.on("renewal", (data1: string, data2: string) => {
+      sessionStorage.removeItem("renewal");
+      setOpenRooms(JSON.parse(data1));
+      setJoiningRooms(JSON.parse(data2));
+    });
   }
 
   useEffect(() => {

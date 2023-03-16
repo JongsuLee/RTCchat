@@ -1,199 +1,159 @@
-import React, { ChangeEvent, useEffect, useState } from "react";
+import { resolve } from "path";
+import React, {
+  ChangeEvent,
+  SetStateAction,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Socket } from "socket.io-client";
 import { ClientToServerEvents, ServerToClientEvents } from "src/types/socket";
+import { getCameras, handleCamera, handleMute } from "./MediaSet";
 import MyFace from "./MyFace";
 import PeerFace from "./PeerFace";
 
+interface Client {
+  id: string;
+  nickName: string;
+}
+
+interface Peers {
+  [id: string]: RTCPeerConnection;
+}
+
 interface Props {
   socket: Socket<ServerToClientEvents, ClientToServerEvents>;
-  peerConnected: string[];
   roomName: string;
   host: string;
+  clients: Client[];
+  muteBtn: string;
+  setMuteBtn: React.Dispatch<SetStateAction<string>>;
+  cameraBtn: string;
+  setCameraBtn: React.Dispatch<SetStateAction<string>>;
+  muted: boolean;
+  setMuted: React.Dispatch<SetStateAction<boolean>>;
+  cameraState: boolean;
+  setCameraState: React.Dispatch<SetStateAction<boolean>>;
+  setCameraId: React.Dispatch<SetStateAction<string | null>>;
+  myStream: MediaStream | null;
 }
 
 const FaceConnection: React.FC<Props> = ({
   socket,
-  peerConnected,
   roomName,
   host,
+  clients,
+  muteBtn,
+  setMuteBtn,
+  cameraBtn,
+  setCameraBtn,
+  muted,
+  setMuted,
+  cameraState,
+  setCameraState,
+  setCameraId,
+  myStream,
 }) => {
-  const [muteBtn, setMuteBtn] = useState<string>("UnMute");
-  const [cameraBtn, setCameraBtn] = useState<string>("CameraOFF");
-  const [muted, setMuted] = useState<boolean>(true);
-  const [cameraState, setCameraState] = useState<boolean>(true);
-  const [cameraId, setCameraId] = useState<string | null>(null);
-  const [myStream, setMyStream] = useState<MediaStream>();
-  const [peers, setPeers] = useState<Map<string, RTCPeerConnection>>(new Map());
-  const [remoteStreams, setRemoteStreams] = useState<MediaStream[]>([]);
+  const peers = useRef<Peers>({});
+  const countPeers = useRef(0);
 
   // Device Setting
-  async function getCameras() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const curCamera = myStream?.getVideoTracks()[0];
-
-    const select = document.getElementById("cameras");
-    devices.map(
-      (device: MediaDeviceInfo, index: number, array: MediaDeviceInfo[]) => {
-        if (device.kind === "videoinput") {
-          const option = document.createElement("option");
-          option.value = device.deviceId;
-          option.innerText = device.label;
-          if (curCamera && curCamera.label === device.label) option.selected;
-          select?.appendChild(option);
-        }
-      }
-    );
-  }
-
-  async function getMedia(cameraId: string | null) {
-    let mediaOption: MediaStreamConstraints;
-    if (cameraId) {
-      mediaOption = {
-        audio: true,
-        video: { deviceId: { exact: cameraId } },
-      };
-    } else {
-      mediaOption = {
-        audio: true,
-        video: { facingMode: "user" },
-      };
-    }
-    try {
-      const myStream = await navigator.mediaDevices.getUserMedia(mediaOption);
-      myStream
-        .getAudioTracks()
-        .forEach(
-          (track: MediaStreamTrack, index: number, array: MediaStreamTrack[]) =>
-            (track.enabled = !muted)
-        );
-      myStream
-        .getVideoTracks()
-        .forEach(
-          (track: MediaStreamTrack, index: number, array: MediaStreamTrack[]) =>
-            (track.enabled = cameraState)
-        );
-
-      if (cameraId === null) await getCameras();
-      setMyStream(myStream);
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  function handleMute() {
-    setMuted(!muted);
-    if (muted) setMuteBtn("Mute");
-    else setMuteBtn("UnMute");
-  }
-
-  function handleCamera() {
-    setCameraState(!cameraState);
-    if (cameraState) setCameraBtn("CameraOFF");
-    else setCameraBtn("CameraON");
-  }
-
   async function handleSelectCamera(event: ChangeEvent<HTMLSelectElement>) {
     setCameraId(event.target.value);
-    await getMedia(cameraId);
+  }
+
+  function handleMuteBtn() {
+    handleMute(muted, setMuted, setMuteBtn);
+  }
+
+  function handleCameraBtn() {
+    handleCamera(cameraState, setCameraState, setCameraBtn);
   }
 
   // RTC Connection
-  let peer: RTCPeerConnection;
-  function makePeerConnection(to: string): RTCPeerConnection {
-    peer = new RTCPeerConnection({
+  function makeConnection(to: string, stream: MediaStream, newJoin: boolean) {
+    const peer = new RTCPeerConnection({
       iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
     });
-    const newPeers = new Map(peers);
-    newPeers.set(to, peer);
-    setPeers(newPeers);
 
-    peer.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
-      if (event.candidate) socket.emit("ice", event.candidate, to, socket.id);
-      console.log("sent ice to", to);
-    };
+    peers.current = { ...peers.current, [to]: peer };
+    countPeers.current += 1;
+    console.log(peers);
 
-    peer.ontrack = (event) => {
-      const remoteStream = event.streams[0];
-      setRemoteStreams([...remoteStreams, remoteStream]);
-    };
+    peer.addEventListener("icecandidate", (event) => {
+      if (event.candidate) {
+        socket.emit("ice", event.candidate, to, socket.id);
+        console.log("sent ice to", to);
+      }
+    });
 
-    return peer;
-  }
+    stream.getTracks().forEach((track) => peer.addTrack(track, stream));
 
-  async function createOffer(id: string, peer: RTCPeerConnection) {
-    const offer = await peer.createOffer();
-    await peer.setLocalDescription(offer);
-    socket.emit("offer", offer, id, socket.id);
-    console.log("sent offer");
-  }
+    peer.ontrack = (event) => console.log(event);
 
-  async function createAnswer(to: string) {
-    if (peer) {
-      const answer = await peer.createAnswer();
-      await peer.setLocalDescription(answer);
-      await new Promise<void>((resolve) => {
-        socket.emit("answer", answer, to, socket.id);
-        socket.on("answered", (answered: RTCSessionDescriptionInit) => {
-          if (answer === answered) resolve();
-        });
-      });
-      console.log("sent answer");
-    }
-  }
+    peer.addEventListener("track", (event) => console.log);
 
-  async function receiveAnswer(
-    answer: RTCSessionDescriptionInit,
-    from: string
-  ) {
-    if (peer) {
-      await new Promise<void>(async (resolve) => {
-        await peer.setRemoteDescription(answer);
-        peer.addEventListener("signalingstatechange", function hanlder() {
-          if (peer.signalingState === "stable") {
-            socket.emit("answered", from, answer);
-            resolve();
-          }
+    if (newJoin) {
+      peer.createOffer().then((offer) => {
+        peer.setLocalDescription(offer).then(() => {
+          console.log("created offer");
+          socket.emit("offer", offer, to, socket.id);
+          console.log("sent offer");
         });
       });
     }
   }
 
-  async function receiveIce(ice: RTCIceCandidate, from: string) {
-    if (peer) await peer.addIceCandidate(ice);
-  }
-
-  // Socket Code
-  socket.on("offer", async (offer: RTCSessionDescriptionInit, from: string) => {
-    peer = makePeerConnection(from);
-
-    if (peer) {
-      console.log("received offer:", offer);
-      await peer.setRemoteDescription(offer);
-      createAnswer(from);
+  socket.on("offer", (offer, from) => {
+    if (myStream) {
+      let peer = peers.current[from];
+      if (peer)
+        peer.setRemoteDescription(offer).then(() => {
+          console.log("received offer");
+          peer.createAnswer().then((answer) => {
+            peer.setLocalDescription(answer).then(() => {
+              console.log("created answer");
+              socket.emit("answer", answer, from, socket.id);
+              console.log("sent answer");
+            });
+          });
+        });
     }
   });
 
-  socket.on(
-    "answer",
-    async (answer: RTCSessionDescriptionInit, from: string) => {
-      await receiveAnswer(answer, from);
-    }
-  );
+  socket.on("answer", (answer, from) => {
+    let peer = peers.current[from];
+    if (peer)
+      peer.setRemoteDescription(answer).then(() => {
+        console.log("received answer");
+        console.log("afterset peer:", peer);
+      });
+  });
 
-  socket.on("ice", (ice: RTCIceCandidate, from: string) => {
-    receiveIce(ice, from);
+  socket.on("ice", (ice, from) => {
+    let peer = peers.current[from];
+    if (peer)
+      peer.addIceCandidate(ice).then(() => {
+        console.log("received ice");
+      });
   });
 
   useEffect(() => {
-    getMedia(cameraId);
-    if (socket.id !== host && peerConnected.length > 1) {
-      for (let i = 0; i < peerConnected.length; i++) {
-        if (peerConnected[i] === socket.id) continue;
-        const peer = makePeerConnection(socket.id);
-        createOffer(peerConnected[i], peer);
+    getCameras(null);
+    getCameras(myStream);
+
+    if (clients.length > 1 && myStream) {
+      const newCome = clients[clients.length - 1].id;
+      if (socket.id === newCome) {
+        for (let i = 0; i < clients.length - 1; i++) {
+          const to = clients[i].id;
+          makeConnection(to, myStream, true);
+        }
+      } else {
+        makeConnection(newCome, myStream, false);
       }
     }
-  }, [muted, cameraState, cameraId]);
+  }, [clients]);
 
   return (
     <>
@@ -205,8 +165,8 @@ const FaceConnection: React.FC<Props> = ({
         <select id="cameras" onChange={handleSelectCamera} />
       </div>
       <div className="control-tracks">
-        <button onClick={handleMute}>{muteBtn}</button>
-        <button onClick={handleCamera}>{cameraBtn}</button>
+        <button onClick={handleMuteBtn}>{muteBtn}</button>
+        <button onClick={handleCameraBtn}>{cameraBtn}</button>
       </div>
     </>
   );

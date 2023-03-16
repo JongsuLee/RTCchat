@@ -8,6 +8,7 @@ const MyFace: React.FC<Props> = ({ myStream }) => {
   useEffect(() => {
     const myFace = document.getElementById("my-face") as HTMLVideoElement;
     if (myFace) myFace.srcObject = myStream;
+    const audio = document.createElement("audio");
   }, [myStream]);
 
   return <video id="my-face" autoPlay playsInline width={400} height={400} />;
