@@ -1,5 +1,5 @@
 import FaceConnection from "@Room/FaceConnection";
-import { getCameras, getMedia } from "@Room/MediaSet";
+import { getCameras, getMedia, getMics, getSpeakers } from "@Room/MediaSet";
 import MediaSetRoom from "@Room/MediaSetRoom";
 import Message from "@Room/Message";
 import MessageForm from "@Room/MessageForm";
@@ -23,6 +23,11 @@ interface Room {
   clients: Client[];
 }
 
+interface Speaker {
+  label: string;
+  id: string;
+}
+
 interface Props {
   socket: Socket<ServerToClientEvents, ClientToServerEvents>;
 }
@@ -42,6 +47,8 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
   const [muted, setMuted] = useState<boolean>(true);
   const [cameraState, setCameraState] = useState<boolean>(true);
   const [cameraId, setCameraId] = useState<string | null>(null);
+  const [speaker, setSpeaker] = useState<Speaker | null>(null);
+  const [micId, setMicId] = useState<string | null>(null);
   const [myStream, setMyStream] = useState<MediaStream | null>(null);
 
   // Message Form
@@ -86,8 +93,10 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
       setClients(room.clients);
     });
     getCameras(myStream);
-    getMedia(cameraId, muted, cameraState, setMyStream);
-  }, [muted, cameraState, cameraId]);
+    getSpeakers(speaker);
+    getMics(myStream);
+    getMedia(cameraId, micId, muted, cameraState, setMyStream);
+  }, [muted, cameraState, cameraId, micId, speaker]);
 
   return (
     <>
@@ -147,6 +156,9 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
           cameraState={cameraState}
           setCameraState={setCameraState}
           setCameraId={setCameraId}
+          speaker={speaker}
+          setSpeaker={setSpeaker}
+          setMicId={setMicId}
           myStream={myStream}
         />
       )}

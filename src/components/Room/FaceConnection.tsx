@@ -158,7 +158,7 @@ const FaceConnection: React.FC<Props> = ({
   return (
     <>
       <div className="faces">
-        {myStream && <MyFace myStream={myStream} />}
+        {myStream && <MyFace myStream={myStream} speakerId={null} />}
         <PeerFace />
       </div>
       <div className="select-options">
