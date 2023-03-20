@@ -5,41 +5,55 @@ interface Speaker {
   id: string;
 }
 
-export async function getCameras(myStream: MediaStream | null) {
+export async function getCameras(
+  myStream: MediaStream | null,
+  cameraId: string | null
+) {
   const devices = await navigator.mediaDevices.enumerateDevices();
   const curCamera = myStream?.getVideoTracks()[0];
   const select = document.getElementById("cameras");
 
-  if (curCamera) {
+  if (cameraId) {
     const options = select?.getElementsByTagName("option");
-    if (options)
+    if (options) {
       for (let i = 0; i < options.length; i++) {
         const option = options[i];
-        if (curCamera.label === option.label) option.selected = true;
+        if (option.value === cameraId) option.selected = true;
       }
+    }
   } else {
-    devices.map((device) => {
-      if (device.kind === "videoinput") {
-        const option = document.createElement("option");
-        option.value = device.deviceId;
-        option.innerText = device.label;
-        select?.appendChild(option);
-      }
-    });
+    if (curCamera) {
+      const options = select?.getElementsByTagName("option");
+      if (options)
+        for (let i = 0; i < options.length; i++) {
+          const option = options[i];
+          if (curCamera.label === option.label) option.selected = true;
+        }
+    } else {
+      devices.map((device) => {
+        if (device.kind === "videoinput") {
+          const option = document.createElement("option");
+          option.value = device.deviceId;
+          option.innerText = device.label;
+          select?.appendChild(option);
+        }
+      });
+    }
   }
 }
 
-export async function getSpeakers(speaker: Speaker | null) {
+export async function getSpeakers(speakerId: string | null) {
   const devices = await navigator.mediaDevices.enumerateDevices();
   const select = document.getElementById("speakers");
 
-  if (speaker) {
+  if (speakerId) {
     const options = select?.getElementsByTagName("option");
-    if (options)
+    if (options) {
       for (let i = 0; i < options.length; i++) {
         const option = options[i];
-        if (speaker.label === option.label) option.selected = true;
+        if (option.value === speakerId) option.selected = true;
       }
+    }
   } else {
     devices.map((device) => {
       if (device.kind === "audiooutput") {
@@ -52,36 +66,51 @@ export async function getSpeakers(speaker: Speaker | null) {
   }
 }
 
-export async function getMics(myStream: MediaStream | null) {
+export async function getMics(
+  myStream: MediaStream | null,
+  micId: string | null
+) {
   const devices = await navigator.mediaDevices.enumerateDevices();
   const curMic = myStream?.getAudioTracks()[0];
   const select = document.getElementById("mics");
 
-  if (curMic) {
+  if (micId) {
     const options = select?.getElementsByTagName("option");
-    if (options)
+    if (options) {
       for (let i = 0; i < options.length; i++) {
         const option = options[i];
-        if (curMic.label === option.label) option.selected = true;
+        if (option.value === micId) option.selected = true;
       }
+    }
   } else {
-    devices.map((device) => {
-      if (device.kind === "audioinput") {
-        const option = document.createElement("option");
-        option.value = device.deviceId;
-        option.innerText = device.label;
-        select?.appendChild(option);
-      }
-    });
+    if (curMic) {
+      const options = select?.getElementsByTagName("option");
+      if (options)
+        for (let i = 0; i < options.length; i++) {
+          const option = options[i];
+          if (curMic.label === option.label) option.selected = true;
+        }
+    } else {
+      devices.map((device) => {
+        if (device.kind === "audioinput") {
+          const option = document.createElement("option");
+          option.value = device.deviceId;
+          option.innerText = device.label;
+          select?.appendChild(option);
+        }
+      });
+    }
   }
 }
 
 export async function getMedia(
   cameraId: string | null,
   micId: string | null,
+  speakerId: string | null,
   muted: boolean,
   cameraState: boolean,
-  setMyStream: React.Dispatch<SetStateAction<MediaStream | null>>
+  setMyStream: React.Dispatch<SetStateAction<MediaStream | null>>,
+  setSpeakerId: React.Dispatch<SetStateAction<string | null>>
 ) {
   const audioConstraints = micId ? { deviceId: { exact: micId } } : true;
   const videoConstraints = cameraId
@@ -96,14 +125,10 @@ export async function getMedia(
         (track: MediaStreamTrack, index: number, array: MediaStreamTrack[]) =>
           (track.enabled = !muted)
       );
-    myStream
-      .getVideoTracks()
-      .forEach(
-        (track: MediaStreamTrack, index: number, array: MediaStreamTrack[]) =>
-          (track.enabled = cameraState)
-      );
-    getCameras(myStream);
+    getCameras(myStream, cameraId);
+    getMics(myStream, micId);
     setMyStream(myStream);
+    !speakerId && setSpeakerId("default");
   } catch (error) {
     console.log(error);
   }
@@ -112,8 +137,10 @@ export async function getMedia(
 export function handleMute(
   muted: boolean,
   setMuted: React.Dispatch<SetStateAction<boolean>>,
-  setMuteBtn: React.Dispatch<SetStateAction<string>>
+  setMuteBtn: React.Dispatch<SetStateAction<string>>,
+  myStream: MediaStream | null
 ) {
+  if (myStream) myStream.getAudioTracks()[0].enabled = !muted;
   setMuted(!muted);
   if (muted) setMuteBtn("Mute");
   else setMuteBtn("UnMute");
@@ -122,8 +149,10 @@ export function handleMute(
 export function handleCamera(
   cameraState: boolean,
   setCameraState: React.Dispatch<SetStateAction<boolean>>,
-  setCameraBtn: React.Dispatch<SetStateAction<string>>
+  setCameraBtn: React.Dispatch<SetStateAction<string>>,
+  myStream: MediaStream | null
 ) {
+  if (myStream) myStream.getVideoTracks()[0].enabled = !cameraState;
   setCameraState(!cameraState);
   if (cameraState) setCameraBtn("CameraOFF");
   else setCameraBtn("CameraON");

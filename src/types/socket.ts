@@ -15,6 +15,7 @@ export interface ServerToClientEvents {
   renewal: (joiningRooms: string, openRooms: string) => void;
   join: (data: string) => void;
   entered: (room: Room) => void;
+  leave_room: (id: string, clients: Client[]) => void;
   offer: (offer: RTCSessionDescriptionInit, from: string) => void;
   answer: (answer: RTCSessionDescriptionInit, from: string) => void;
   ice: (ice: RTCIceCandidate, from: string) => void;

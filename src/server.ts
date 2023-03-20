@@ -157,8 +157,6 @@ io.on("connection", (socket) => {
     const room = openRooms.get(roomName);
     const joins = joiningRooms.get(id);
 
-    socket.leave(roomName);
-
     let idx = 0;
     room?.clients.map((client, index) => {
       if (client.id === id) idx = index;
@@ -195,6 +193,9 @@ io.on("connection", (socket) => {
       JSON.stringify(joiningRoomsObj)
     );
     socket.to("server").emit("join", JSON.stringify(openRoomsObj));
+
+    room && socket.to(roomName).emit("leave_room", id, room.clients);
+    socket.leave(roomName);
   });
 
   socket.on(

@@ -1,13 +1,15 @@
 import React, { ChangeEvent, SetStateAction, useEffect } from "react";
 import { Socket } from "socket.io-client";
 import { ClientToServerEvents, ServerToClientEvents } from "src/types/socket";
-import { getMedia, handleCamera, handleMute } from "./MediaSet";
+import {
+  getCameras,
+  getMedia,
+  getMics,
+  getSpeakers,
+  handleCamera,
+  handleMute,
+} from "./MediaSet";
 import MyFace from "./MyFace";
-
-interface Speaker {
-  label: string;
-  id: string;
-}
 
 interface Props {
   setReadyToMedia: React.Dispatch<SetStateAction<boolean>>;
@@ -19,11 +21,14 @@ interface Props {
   setMuted: React.Dispatch<SetStateAction<boolean>>;
   cameraState: boolean;
   setCameraState: React.Dispatch<SetStateAction<boolean>>;
+  cameraId: string | null;
   setCameraId: React.Dispatch<SetStateAction<string | null>>;
-  speaker: Speaker | null;
-  setSpeaker: React.Dispatch<SetStateAction<Speaker | null>>;
+  speakerId: string | null;
+  setSpeakerId: React.Dispatch<SetStateAction<string | null>>;
+  micId: string | null;
   setMicId: React.Dispatch<SetStateAction<string | null>>;
   myStream: MediaStream | null;
+  setMyStream: React.Dispatch<SetStateAction<MediaStream | null>>;
 }
 
 const MediaSetRoom: React.FC<Props> = ({
@@ -36,19 +41,21 @@ const MediaSetRoom: React.FC<Props> = ({
   setMuted,
   cameraState,
   setCameraState,
+  cameraId,
   setCameraId,
-  speaker,
-  setSpeaker,
+  speakerId,
+  setSpeakerId,
+  micId,
   setMicId,
   myStream,
+  setMyStream,
 }) => {
   function handleSelectCamera(event: ChangeEvent<HTMLSelectElement>) {
     setCameraId(event.target.value);
   }
 
   function handleSelectSpeaker(event: ChangeEvent<HTMLSelectElement>) {
-    const label = event.target[event.target.selectedIndex].textContent;
-    if (label) setSpeaker({ label: label, id: event.target.value });
+    setSpeakerId(event.target.value);
   }
 
   function handleSelectMic(event: ChangeEvent<HTMLSelectElement>) {
@@ -56,26 +63,36 @@ const MediaSetRoom: React.FC<Props> = ({
   }
 
   function handleMuteBtn() {
-    handleMute(muted, setMuted, setMuteBtn);
+    handleMute(muted, setMuted, setMuteBtn, myStream);
   }
 
   function handleCameraBtn() {
-    handleCamera(cameraState, setCameraState, setCameraBtn);
+    handleCamera(cameraState, setCameraState, setCameraBtn, myStream);
   }
 
   function readyHandler() {
     setReadyToMedia(true);
   }
 
+  useEffect(() => {
+    getCameras(myStream, cameraId);
+    getSpeakers(speakerId);
+    getMics(myStream, micId);
+    getMedia(
+      cameraId,
+      micId,
+      speakerId,
+      muted,
+      cameraState,
+      setMyStream,
+      setSpeakerId
+    );
+  }, [muted, cameraState, cameraId, micId, speakerId]);
+
   return (
     <>
       <div className="faces">
-        {myStream && (
-          <MyFace
-            myStream={myStream}
-            speakerId={speaker ? speaker.id : "default"}
-          />
-        )}
+        {myStream && <MyFace myStream={myStream} speakerId={speakerId} />}
       </div>
       <div className="select-options">
         <select id="cameras" onChange={handleSelectCamera} />

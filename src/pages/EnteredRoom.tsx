@@ -6,7 +6,6 @@ import MessageForm from "@Room/MessageForm";
 import Messages from "@Room/Messages";
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
-import { set, SubmitHandler, useForm } from "react-hook-form";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import io, { Socket } from "socket.io-client";
 import { ClientToServerEvents, ServerToClientEvents } from "src/types/socket";
@@ -21,11 +20,6 @@ interface Room {
   host: string;
   nickName: string;
   clients: Client[];
-}
-
-interface Speaker {
-  label: string;
-  id: string;
 }
 
 interface Props {
@@ -47,13 +41,14 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
   const [muted, setMuted] = useState<boolean>(true);
   const [cameraState, setCameraState] = useState<boolean>(true);
   const [cameraId, setCameraId] = useState<string | null>(null);
-  const [speaker, setSpeaker] = useState<Speaker | null>(null);
+  const [speaker, setSpeaker] = useState<string | null>(null);
   const [micId, setMicId] = useState<string | null>(null);
   const [myStream, setMyStream] = useState<MediaStream | null>(null);
 
   // Message Form
   const [messages, setMessages] = useState<JSX.Element[]>([]);
   const [count, setCount] = useState<number>(0);
+  const [leave, setLeave] = useState<string | null>(null);
 
   // Header Functions
   window.onpopstate = (event: PopStateEvent) => {
@@ -69,6 +64,7 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
   function handleLeave() {
     roomName && socket.emit("leave_room", roomName, socket.id);
     sessionStorage.setItem("renewal", "true");
+    myStream && myStream.getTracks().forEach((track) => track.stop());
     navigate("/");
   }
 
@@ -86,17 +82,19 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
       />,
     ]);
   });
+
+  socket.on("leave_room", (id, newClients) => {
+    setLeave(id);
+    setClients(newClients);
+  });
+
   useEffect(() => {
     socket.on("entered", (room) => {
       setHost(room.host);
       setNickName(room.nickName);
       setClients(room.clients);
     });
-    getCameras(myStream);
-    getSpeakers(speaker);
-    getMics(myStream);
-    getMedia(cameraId, micId, muted, cameraState, setMyStream);
-  }, [muted, cameraState, cameraId, micId, speaker]);
+  }, []);
 
   return (
     <>
@@ -123,8 +121,14 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
                   setMuted={setMuted}
                   cameraState={cameraState}
                   setCameraState={setCameraState}
+                  cameraId={cameraId}
                   setCameraId={setCameraId}
+                  speakerId={speaker}
+                  setSpeakerId={setSpeaker}
+                  micId={micId}
+                  setMicId={setMicId}
                   myStream={myStream}
+                  leave={leave}
                 />
               )}
             </div>
@@ -155,11 +159,14 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
           setMuted={setMuted}
           cameraState={cameraState}
           setCameraState={setCameraState}
+          cameraId={cameraId}
           setCameraId={setCameraId}
-          speaker={speaker}
-          setSpeaker={setSpeaker}
+          speakerId={speaker}
+          setSpeakerId={setSpeaker}
+          micId={micId}
           setMicId={setMicId}
           myStream={myStream}
+          setMyStream={setMyStream}
         />
       )}
     </>
