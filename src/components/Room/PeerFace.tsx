@@ -21,13 +21,19 @@ const PeerFace: React.FC<Props> = ({ peerStream, speakerId, idx }) => {
     const peerFace = document.getElementById(
       `peer-face${idx}`
     ) as HTMLMediaElement;
-    if ("setSinkId" in peerFace) {
-      (peerFace as any).setSinkId(speakerId);
-    }
+    console.log("peerFace:", speakerId);
+
     if (peerFace) {
       peerFace.srcObject = peerStream.stream;
+      if (speakerId) {
+        (peerFace as any).setSinkId(speakerId);
+        console.log((peerFace as any).sinkId);
+      } else {
+        (peerFace as any).setSinkId("default");
+        console.log((peerFace as any).sinkId);
+      }
     }
-  }, [peerStream]);
+  }, [peerStream, speakerId]);
 
   return (
     <video

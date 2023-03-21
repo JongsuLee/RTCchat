@@ -2,14 +2,15 @@ import React, { useEffect, useState } from "react";
 
 interface Props {
   myStream: MediaStream;
-  speakerId: string | null;
+  muted: boolean;
 }
 
-const MyFace: React.FC<Props> = ({ myStream, speakerId }) => {
+const MyFace: React.FC<Props> = ({ myStream, muted }) => {
   useEffect(() => {
     const myFace = document.getElementById("my-face") as HTMLVideoElement;
     if (myFace) {
       myFace.srcObject = myStream;
+      if (muted) myFace.muted = muted;
     }
   }, [myStream]);
 

@@ -13,10 +13,6 @@ import MyFace from "./MyFace";
 
 interface Props {
   setReadyToMedia: React.Dispatch<SetStateAction<boolean>>;
-  muteBtn: string;
-  setMuteBtn: React.Dispatch<SetStateAction<string>>;
-  cameraBtn: string;
-  setCameraBtn: React.Dispatch<SetStateAction<string>>;
   muted: boolean;
   setMuted: React.Dispatch<SetStateAction<boolean>>;
   cameraState: boolean;
@@ -33,10 +29,6 @@ interface Props {
 
 const MediaSetRoom: React.FC<Props> = ({
   setReadyToMedia,
-  muteBtn,
-  setMuteBtn,
-  cameraBtn,
-  setCameraBtn,
   muted,
   setMuted,
   cameraState,
@@ -63,11 +55,11 @@ const MediaSetRoom: React.FC<Props> = ({
   }
 
   function handleMuteBtn() {
-    handleMute(muted, setMuted, setMuteBtn, myStream);
+    handleMute(muted, setMuted, myStream);
   }
 
   function handleCameraBtn() {
-    handleCamera(cameraState, setCameraState, setCameraBtn, myStream);
+    handleCamera(cameraState, setCameraState, myStream);
   }
 
   function readyHandler() {
@@ -75,9 +67,9 @@ const MediaSetRoom: React.FC<Props> = ({
   }
 
   useEffect(() => {
-    getCameras(myStream, cameraId);
-    getSpeakers(speakerId);
-    getMics(myStream, micId);
+    getCameras(null, null);
+    getSpeakers(null);
+    getMics(null, null);
     getMedia(
       cameraId,
       micId,
@@ -87,12 +79,18 @@ const MediaSetRoom: React.FC<Props> = ({
       setMyStream,
       setSpeakerId
     );
-  }, [muted, cameraState, cameraId, micId, speakerId]);
+  }, []);
+
+  useEffect(() => {
+    getCameras(myStream, cameraId);
+    getSpeakers(speakerId);
+    getMics(myStream, micId);
+  }, [cameraId, micId, speakerId]);
 
   return (
     <>
       <div className="faces">
-        {myStream && <MyFace myStream={myStream} speakerId={speakerId} />}
+        {myStream && <MyFace myStream={myStream} muted={false} />}
       </div>
       <div className="select-options">
         <select id="cameras" onChange={handleSelectCamera} />
@@ -100,8 +98,10 @@ const MediaSetRoom: React.FC<Props> = ({
         <select id="mics" onChange={handleSelectMic} />
       </div>
       <div className="control-tracks">
-        <button onClick={handleMuteBtn}>{muteBtn}</button>
-        <button onClick={handleCameraBtn}>{cameraBtn}</button>
+        <button onClick={handleMuteBtn}>{muted ? "UnMute" : "Mute"}</button>
+        <button onClick={handleCameraBtn}>
+          {cameraState ? "CameraOFF" : "CameraON"}
+        </button>
       </div>
       <button onClick={readyHandler}>MediaSetRoom</button>
     </>

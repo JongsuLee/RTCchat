@@ -39,10 +39,6 @@ interface Props {
   roomName: string;
   host: string;
   clients: Client[];
-  muteBtn: string;
-  setMuteBtn: React.Dispatch<SetStateAction<string>>;
-  cameraBtn: string;
-  setCameraBtn: React.Dispatch<SetStateAction<string>>;
   muted: boolean;
   setMuted: React.Dispatch<SetStateAction<boolean>>;
   cameraState: boolean;
@@ -62,10 +58,6 @@ const FaceConnection: React.FC<Props> = ({
   roomName,
   host,
   clients,
-  muteBtn,
-  setMuteBtn,
-  cameraBtn,
-  setCameraBtn,
   muted,
   setMuted,
   cameraState,
@@ -97,11 +89,11 @@ const FaceConnection: React.FC<Props> = ({
   }
 
   function handleMuteBtn() {
-    handleMute(muted, setMuted, setMuteBtn, myStream);
+    handleMute(muted, setMuted, myStream);
   }
 
   function handleCameraBtn() {
-    handleCamera(cameraState, setCameraState, setCameraBtn, myStream);
+    handleCamera(cameraState, setCameraState, myStream);
   }
 
   // RTC Connection
@@ -191,7 +183,8 @@ const FaceConnection: React.FC<Props> = ({
     getCameras(myStream, cameraId);
     getSpeakers(speakerId);
     getMics(myStream, micId);
-  }, [muted, cameraState, cameraId, micId, speakerId]);
+    console.log("muted:", muted);
+  }, [cameraId, micId, speakerId]);
 
   useEffect(() => {
     if (myStream && clients.length > 1) {
@@ -221,13 +214,13 @@ const FaceConnection: React.FC<Props> = ({
   return (
     <>
       <div className="faces">
-        {myStream && <MyFace myStream={myStream} speakerId={null} />}
+        {myStream && <MyFace myStream={myStream} muted={true} />}
         {peerStreams.length > 0 &&
           peerStreams.map((peerStream, idx) => (
             <PeerFace
               key={idx}
               peerStream={peerStream}
-              speakerId={null}
+              speakerId={speakerId}
               idx={idx}
             />
           ))}
@@ -238,8 +231,10 @@ const FaceConnection: React.FC<Props> = ({
         <select id="mics" onChange={handleSelectMic} />
       </div>
       <div className="control-tracks">
-        <button onClick={handleMuteBtn}>{muteBtn}</button>
-        <button onClick={handleCameraBtn}>{cameraBtn}</button>
+        <button onClick={handleMuteBtn}>{muted ? "UnMute" : "Mute"}</button>
+        <button onClick={handleCameraBtn}>
+          {cameraState ? "CameraOFF" : "CameraON"}
+        </button>
       </div>
     </>
   );

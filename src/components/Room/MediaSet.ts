@@ -119,12 +119,7 @@ export async function getMedia(
   const mediaOption = { audio: audioConstraints, video: videoConstraints };
   try {
     const myStream = await navigator.mediaDevices.getUserMedia(mediaOption);
-    myStream
-      .getAudioTracks()
-      .forEach(
-        (track: MediaStreamTrack, index: number, array: MediaStreamTrack[]) =>
-          (track.enabled = !muted)
-      );
+    myStream.getAudioTracks()[0].enabled = !muted;
     getCameras(myStream, cameraId);
     getMics(myStream, micId);
     setMyStream(myStream);
@@ -137,23 +132,17 @@ export async function getMedia(
 export function handleMute(
   muted: boolean,
   setMuted: React.Dispatch<SetStateAction<boolean>>,
-  setMuteBtn: React.Dispatch<SetStateAction<string>>,
   myStream: MediaStream | null
 ) {
-  if (myStream) myStream.getAudioTracks()[0].enabled = !muted;
+  if (myStream) myStream.getAudioTracks()[0].enabled = muted;
   setMuted(!muted);
-  if (muted) setMuteBtn("Mute");
-  else setMuteBtn("UnMute");
 }
 
 export function handleCamera(
   cameraState: boolean,
   setCameraState: React.Dispatch<SetStateAction<boolean>>,
-  setCameraBtn: React.Dispatch<SetStateAction<string>>,
   myStream: MediaStream | null
 ) {
   if (myStream) myStream.getVideoTracks()[0].enabled = !cameraState;
   setCameraState(!cameraState);
-  if (cameraState) setCameraBtn("CameraOFF");
-  else setCameraBtn("CameraON");
 }

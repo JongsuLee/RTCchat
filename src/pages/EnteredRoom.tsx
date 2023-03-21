@@ -36,9 +36,7 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
 
   // Media Set
   const [readyToMedia, setReadyToMedia] = useState<boolean>(false);
-  const [muteBtn, setMuteBtn] = useState<string>("UnMute");
-  const [cameraBtn, setCameraBtn] = useState<string>("CameraOFF");
-  const [muted, setMuted] = useState<boolean>(true);
+  const [muted, setMuted] = useState<boolean>(false);
   const [cameraState, setCameraState] = useState<boolean>(true);
   const [cameraId, setCameraId] = useState<string | null>(null);
   const [speaker, setSpeaker] = useState<string | null>(null);
@@ -113,10 +111,6 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
                   roomName={roomName}
                   host={host}
                   clients={clients}
-                  muteBtn={muteBtn}
-                  setMuteBtn={setMuteBtn}
-                  cameraBtn={cameraBtn}
-                  setCameraBtn={setCameraBtn}
                   muted={muted}
                   setMuted={setMuted}
                   cameraState={cameraState}
@@ -151,10 +145,6 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
       ) : (
         <MediaSetRoom
           setReadyToMedia={setReadyToMedia}
-          muteBtn={muteBtn}
-          setMuteBtn={setMuteBtn}
-          cameraBtn={cameraBtn}
-          setCameraBtn={setCameraBtn}
           muted={muted}
           setMuted={setMuted}
           cameraState={cameraState}
