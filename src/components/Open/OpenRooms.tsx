@@ -12,7 +12,7 @@ interface Props {
 const OpenRooms: React.FC<Props> = ({ rooms }) => {
   return (
     <>
-      <div>Opening Rooms</div>
+      <div className="bg-red-500">Opening Rooms</div>
       {rooms &&
         Object.entries(rooms).map(
           (room: [string, Room], index: number, array: [string, Room][]) => (

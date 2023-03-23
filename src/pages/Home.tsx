@@ -54,11 +54,11 @@ const Home: React.FC<Props> = ({ io }) => {
   }, []);
 
   return (
-    <>
+    <div className="bg-red-500 text-red-400">
       <OpenRooms rooms={openRooms} />
       {socket && <CreateRoom socket={socket} />}
       <JoiningRooms rooms={joiningRooms} />
-    </>
+    </div>
   );
 };
 
