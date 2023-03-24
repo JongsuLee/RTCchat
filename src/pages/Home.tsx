@@ -6,9 +6,15 @@ import io, { Socket } from "socket.io-client";
 import { ClientToServerEvents, ServerToClientEvents } from "src/types/socket";
 import { useLocation } from "react-router-dom";
 
+interface Client {
+  id: string;
+  nickName: string;
+}
+
 interface Room {
   room: string;
-  clients: string[];
+  host: string;
+  clients: Client[];
 }
 interface JoiningRoom extends Room {
   nickName: string;
@@ -25,6 +31,7 @@ const Home: React.FC<Props> = ({ io }) => {
   > | null>(null);
   const [openRooms, setOpenRooms] = useState<Room[] | null>(null);
   const [joiningRooms, setJoiningRooms] = useState<JoiningRoom[] | null>(null);
+  const [selectRoom, setSelectRoom] = useState<string | null>(null);
 
   if (socket) {
     socket.on("connect", () => {
@@ -54,10 +61,14 @@ const Home: React.FC<Props> = ({ io }) => {
   }, []);
 
   return (
-    <div className="bg-red-500 text-red-400">
-      <OpenRooms rooms={openRooms} />
-      {socket && <CreateRoom socket={socket} />}
-      <JoiningRooms rooms={joiningRooms} />
+    <div className="border flex w-screen h-screen justify-center border-black">
+      <div className="open-rooms w-2/5 h-4/5 mr-40 my-auto border border-black">
+        <OpenRooms rooms={openRooms} setSelectRoom={setSelectRoom} />
+      </div>
+      <div className="my-rooms w-1/5 h-4/5 my-auto border border-black">
+        {socket && <CreateRoom socket={socket} selectRoom={selectRoom} />}
+        <JoiningRooms rooms={joiningRooms} />
+      </div>
     </div>
   );
 };
