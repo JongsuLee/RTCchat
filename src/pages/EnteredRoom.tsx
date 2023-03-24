@@ -105,7 +105,7 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
           </div>
           <div className="messanger">
             <div className="face-talk">
-              {socket && roomName !== undefined && host && (
+              {socket && roomName && host && (
                 <FaceConnection
                   socket={socket}
                   roomName={roomName}
@@ -128,7 +128,7 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
             </div>
             <div className="message-talk">
               <Messages messages={messages} />
-              {roomName !== undefined && (
+              {roomName && (
                 <MessageForm
                   socket={socket}
                   roomName={roomName}
@@ -144,6 +144,8 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
         </>
       ) : (
         <MediaSetRoom
+          socket={socket}
+          roomName={roomName}
           setReadyToMedia={setReadyToMedia}
           muted={muted}
           setMuted={setMuted}

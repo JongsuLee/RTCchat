@@ -214,7 +214,15 @@ const FaceConnection: React.FC<Props> = ({
   return (
     <>
       <div className="faces">
-        {myStream && <MyFace myStream={myStream} muted={true} />}
+        {myStream && (
+          <MyFace
+            width={400}
+            height={400}
+            myStream={myStream}
+            muted={true}
+            speakerId={speakerId}
+          />
+        )}
         {peerStreams.length > 0 &&
           peerStreams.map((peerStream, idx) => (
             <PeerFace
