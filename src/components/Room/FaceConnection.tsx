@@ -212,8 +212,8 @@ const FaceConnection: React.FC<Props> = ({
   }, [clients]);
 
   return (
-    <>
-      <div className="faces">
+    <div className="faceconnection-frame h-full flex flex-col items-center justify-around">
+      <div className="faces flex flex-wrap">
         {myStream && (
           <MyFace
             width={400}
@@ -233,18 +233,43 @@ const FaceConnection: React.FC<Props> = ({
             />
           ))}
       </div>
-      <div className="select-options">
-        <select id="cameras" onChange={handleSelectCamera} />
-        <select id="speakers" onChange={handleSelectSpeaker} />
-        <select id="mics" onChange={handleSelectMic} />
+      <div className="select-media-set flex items-center justify-around">
+        <div className="select-options h-24 flex flex-col justify-around mr-8">
+          <div className="w-96 flex justify-between">
+            <div className="font-bold">Camera</div>
+            <select
+              className="w-72"
+              id="cameras"
+              onChange={handleSelectCamera}
+            />
+          </div>
+          <div className="w-96 flex justify-between">
+            <div className="font-bold">Speaker</div>
+            <select
+              className="w-72"
+              id="speakers"
+              onChange={handleSelectSpeaker}
+            />
+          </div>
+          <div className="w-96 flex justify-between">
+            <div className="font-bold">Mic</div>
+            <select className="w-72" id="mics" onChange={handleSelectMic} />
+          </div>
+        </div>
+        <div className="control-tracks">
+          <button
+            className="border rounded-2xl font-bold text-lg p-3 mr-4"
+            onClick={handleMuteBtn}>
+            {muted ? "UnMute" : "Mute"}
+          </button>
+          <button
+            className="border rounded-2xl font-bold text-lg p-3"
+            onClick={handleCameraBtn}>
+            {cameraState ? "CameraOFF" : "CameraON"}
+          </button>
+        </div>
       </div>
-      <div className="control-tracks">
-        <button onClick={handleMuteBtn}>{muted ? "UnMute" : "Mute"}</button>
-        <button onClick={handleCameraBtn}>
-          {cameraState ? "CameraOFF" : "CameraON"}
-        </button>
-      </div>
-    </>
+    </div>
   );
 };
 

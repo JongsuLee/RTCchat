@@ -97,14 +97,22 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
   return (
     <>
       {readyToMedia ? (
-        <>
-          <div className="header">
-            <button onClick={handleGoBack}>뒤로가기</button>
-            <div>{roomName}</div>
-            <button onClick={handleLeave}>나가기</button>
+        <div className="frame w-full h-screen flex flex-col items-center">
+          <div className="header flex w-2/3 p-10 justify-around items-center">
+            <button
+              className="font-bold text-xl border rounded-3xl p-4"
+              onClick={handleGoBack}>
+              &#8656; 뒤로가기
+            </button>
+            <div className="font-bold text-3xl">{roomName}</div>
+            <button
+              className="font-bold text-xl border rounded-3xl p-4"
+              onClick={handleLeave}>
+              나가기
+            </button>
           </div>
-          <div className="messanger">
-            <div className="face-talk">
+          <div className="messanger w-4/5 h-3/5 flex justify-around mt-10">
+            <div className="face-talk w-3/5">
               {socket && roomName && host && (
                 <FaceConnection
                   socket={socket}
@@ -126,7 +134,7 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
                 />
               )}
             </div>
-            <div className="message-talk">
+            <div className="message-talk w-1/3 flex flex-col justify-start items-center">
               <Messages messages={messages} />
               {roomName && (
                 <MessageForm
@@ -141,7 +149,7 @@ const EnteredRoom: React.FC<Props> = ({ socket }) => {
               )}
             </div>
           </div>
-        </>
+        </div>
       ) : (
         <MediaSetRoom
           socket={socket}

@@ -50,14 +50,21 @@ const MessageForm: React.FC<Props> = ({
     if (input) input.value = "";
   };
   return (
-    <form className="message-form" onSubmit={handleSubmit(onSubmitHandler)}>
+    <form
+      className="message-form w-96 h-32 flex justify-between items-center"
+      onSubmit={handleSubmit(onSubmitHandler)}>
       <input
+        className="w-2/3 h-2/3"
         type="text"
         placeholder="매세지를 작성해주세요..."
         {...register("message")}
         required
       />
-      <button type="submit">전송하기</button>
+      <button
+        className="w-24 h-12 font-bold border rounded-lg p-2 bg-sky-300 hover:bg-sky-600 hover:text-white"
+        type="submit">
+        전송하기
+      </button>
     </form>
   );
 };
