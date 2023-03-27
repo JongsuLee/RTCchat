@@ -14,7 +14,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: "https://rtcchat.shop",
     credentials: true,
     optionsSuccessStatus: 200,
   })
@@ -28,7 +28,7 @@ const io = new Server<
   SocketData
 >(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: "https://rtcchat.shop",
   },
 }).of("/chatRooms");
 

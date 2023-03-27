@@ -6,7 +6,7 @@ import { ClientToServerEvents, ServerToClientEvents } from "src/types/socket";
 
 export default function Router() {
   const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
-    "ws://localhost:5000/chatRooms"
+    "wss://ws.rtcchat.shop/chatRooms"
   );
 
   return (
